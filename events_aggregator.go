@@ -1,11 +1,32 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"github.com/davecgh/go-spew/spew"
 	"net/http"
 	"os"
 )
+
+type Response struct {
+	Events []Event `json:"results"`
+}
+
+type Event struct {
+	Name        string
+	Description string
+	Directions  string `json:"how_to_find_us"`
+	Time        int
+	Duration    int
+	URL         string `json:"event_url"`
+
+	Venue struct {
+		Name string
+	}
+	Group struct {
+		Name string
+	}
+}
 
 func main() {
 	apiKey := os.Getenv("MEETUP_API_KEY")
@@ -24,12 +45,12 @@ func main() {
 
 	defer response.Body.Close()
 
-	data, err := ioutil.ReadAll(response.Body)
+	var data Response
 
-	if err != nil {
+	if err := json.NewDecoder(response.Body).Decode(&data); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
-	fmt.Println(string(data))
+	spew.Dump(data)
 }
