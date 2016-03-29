@@ -2,10 +2,13 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html/template"
 	"io"
+	"io/ioutil"
 	"net/http"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -83,15 +86,52 @@ func formatDate(t time.Time) string {
 	return fmt.Sprintf(t.Format("Monday %s January 2006 - 3:04pm"), ordinal(t.Day()))
 }
 
-func main() {
-	apiKey := os.Getenv("MEETUP_API_KEY")
-	techCategoryId := 34
+func GetMeetupEvents(params map[string]string) (response *http.Response, err error) {
+	paramsMap := url.Values{}
 
-	url := fmt.Sprintf("https://api.meetup.com/2/open_events?key=%s&page=20&category=%d&city=%s&country=%s&text_format=plain", apiKey, techCategoryId, "Bristol", "GB")
+	for key, value := range params {
+		paramsMap.Set(key, value)
+	}
+
+	meetupURL := url.URL{
+		Scheme:   "https",
+		Host:     "api.meetup.com",
+		Path:     "/2/open_events",
+		RawQuery: paramsMap.Encode(),
+	}
+
+	url := meetupURL.String()
 
 	fmt.Println(url)
 
-	response, err := http.Get(url)
+	response, err = http.Get(url)
+
+	if response.StatusCode > 399 {
+		errorJSON, err := ioutil.ReadAll(response.Body)
+
+		response.Body.Close()
+
+		if err != nil {
+			return response, err
+		}
+
+		return response, errors.New(string(errorJSON))
+	}
+
+	return
+}
+
+func main() {
+	params := map[string]string{
+		"key":         os.Getenv("MEETUP_API_KEY"),
+		"category":    "34", // "tech"
+		"city":        "Bristol",
+		"country":     "GB",
+		"text_format": "plain",
+		"page":        "20",
+	}
+
+	response, err := GetMeetupEvents(params)
 
 	if err != nil {
 		fmt.Println(err)
