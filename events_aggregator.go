@@ -3,10 +3,12 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/davecgh/go-spew/spew"
+	"html/template"
 	"io"
 	"net/http"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -26,7 +28,9 @@ type Event struct {
 	Duration    time.Duration
 
 	Venue struct {
-		Name string
+		Name    string
+		Address string `json:"address_1"`
+		City    string
 	}
 	Group struct {
 		Name string
@@ -60,6 +64,25 @@ func DecodeJSON(body io.ReadCloser) (events []Event, err error) {
 	return data.Events, nil
 }
 
+func ordinal(day int) string {
+	suffix := "th"
+
+	switch day {
+	case 1, 21, 31:
+		suffix = "st"
+	case 2, 22:
+		suffix = "nd"
+	case 3, 23:
+		suffix = "rd"
+	}
+
+	return strconv.Itoa(day) + suffix
+}
+
+func formatDate(t time.Time) string {
+	return fmt.Sprintf(t.Format("Monday %s January 2006 - 3:04pm"), ordinal(t.Day()))
+}
+
 func main() {
 	apiKey := os.Getenv("MEETUP_API_KEY")
 	techCategoryId := 34
@@ -82,5 +105,28 @@ func main() {
 		os.Exit(1)
 	}
 
-	spew.Dump(data)
+	const tmplSrc = `## [{{.Name}}]({{.URL}})
+
+**{{formatDate .StartTime}}** - *{{.Venue.Name}}, {{.Venue.Address}}, {{trim .Venue.City}}*
+
+<div class="small">
+{{.Description}}
+</div>
+`
+
+	helpers := template.FuncMap{
+		"formatDate": formatDate,
+		"trim":       strings.TrimSpace,
+	}
+
+	tmpl, err := template.New("blog").Funcs(helpers).Parse(tmplSrc)
+
+	if err != nil {
+		panic(err)
+	}
+
+	for _, event := range data {
+		tmpl.Execute(os.Stdout, event)
+		fmt.Print("\n\n")
+	}
 }
