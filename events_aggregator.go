@@ -122,13 +122,23 @@ func GetMeetupEvents(params map[string]string) (response *http.Response, err err
 }
 
 func main() {
+	now := time.Now()
+	month := now.Month() + 1
+
+	startTime := time.Date(now.Year(), month, 1, 0, 0, 0, 0, time.UTC)
+	lastDayOfMonth := time.Date(now.Year(), month+1, 1, 0, 0, 0, 0, time.UTC).Add(-24 * time.Hour).Day()
+	endTime := time.Date(now.Year(), month, lastDayOfMonth, 0, 0, 0, 0, time.UTC)
+
+	fmt.Println(startTime, endTime)
+
 	params := map[string]string{
 		"key":         os.Getenv("MEETUP_API_KEY"),
 		"category":    "34", // "tech"
 		"city":        "Bristol",
 		"country":     "GB",
 		"text_format": "plain",
-		"page":        "20",
+		"page":        "50",
+		"time":        strconv.FormatInt(startTime.Unix()*1000, 10) + "," + strconv.FormatInt(endTime.Unix()*1000, 10),
 	}
 
 	response, err := GetMeetupEvents(params)
