@@ -30,14 +30,21 @@ type Event struct {
 	EndTime     time.Time
 	Duration    time.Duration
 
-	Venue struct {
-		Name    string
-		Address string `json:"address_1"`
-		City    string
-	}
+	Venue Venue
+
 	Group struct {
 		Name string
 	}
+}
+
+type Venue struct {
+	Name    string
+	Address string `json:"address_1"`
+	City    string
+}
+
+func (v Venue) IsEmpty() bool {
+	return v == (Venue{})
 }
 
 func DecodeJSON(body io.ReadCloser) (events []Event, err error) {
@@ -157,7 +164,7 @@ func main() {
 
 	const tmplSrc = `## [{{.Name}}]({{.URL}})
 
-**{{formatDate .StartTime}}** - *{{.Venue.Name}}, {{.Venue.Address}}, {{trim .Venue.City}}*
+**{{formatDate .StartTime}}**{{if not .Venue.IsEmpty}} - *{{.Venue.Name}}, {{.Venue.Address}}, {{trim .Venue.City}}*{{end}}
 
 <div class="small">
 {{.Description}}
