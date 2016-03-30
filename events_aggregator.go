@@ -93,6 +93,10 @@ func formatDate(t time.Time) string {
 	return fmt.Sprintf(t.Format("Monday %s January 2006 - 3:04pm"), ordinal(t.Day()))
 }
 
+func splitIntoParagraphs(t string) []string {
+	return strings.Split(t, "\n\n")
+}
+
 func GetMeetupEvents(params map[string]string) (response *http.Response, err error) {
 	paramsMap := url.Values{}
 
@@ -165,15 +169,17 @@ func main() {
 	const tmplSrc = `## [{{.Name}}]({{.URL}})
 
 **{{formatDate .StartTime}}**{{if not .Venue.IsEmpty}} - *{{.Venue.Name}}, {{.Venue.Address}}, {{trim .Venue.City}}*{{end}}
-
+{{range paragraphs .Description}}
 <div class="small">
-{{.Description}}
+{{.}}
 </div>
+{{end}}
 `
 
 	helpers := template.FuncMap{
 		"formatDate": formatDate,
 		"trim":       strings.TrimSpace,
+		"paragraphs": splitIntoParagraphs,
 	}
 
 	tmpl, err := template.New("blog").Funcs(helpers).Parse(tmplSrc)
@@ -184,6 +190,6 @@ func main() {
 
 	for _, event := range data {
 		tmpl.Execute(os.Stdout, event)
-		fmt.Print("\n\n")
+		fmt.Print("\n")
 	}
 }
