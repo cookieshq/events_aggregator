@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -14,6 +15,9 @@ import (
 	"text/template"
 	"time"
 )
+
+var startDateFlag = flag.String("start", "", "start `date` in ISO 8601 format for events")
+var endDateFlag = flag.String("end", "", "end `date` in ISO 8601 format for events")
 
 type Response struct {
 	Events []Event `json:"results"`
@@ -131,12 +135,40 @@ func GetMeetupEvents(params map[string]string) (response *http.Response, err err
 }
 
 func main() {
+	flag.Parse()
+
 	now := time.Now()
 	month := now.Month() + 1
 
-	startTime := time.Date(now.Year(), month, 1, 0, 0, 0, 0, time.UTC)
-	lastDayOfMonth := time.Date(now.Year(), month+1, 1, 0, 0, 0, 0, time.UTC).Add(-24 * time.Hour).Day()
-	endTime := time.Date(now.Year(), month, lastDayOfMonth, 0, 0, 0, 0, time.UTC)
+	var startTime time.Time
+	var endTime time.Time
+
+	if *startDateFlag == "" {
+		startTime = time.Date(now.Year(), month, 1, 0, 0, 0, 0, time.UTC)
+	} else {
+		t, err := time.ParseInLocation("2006-01-02", *startDateFlag, time.UTC)
+
+		startTime = t
+
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+	}
+
+	if *endDateFlag == "" {
+		lastDayOfMonth := time.Date(now.Year(), month+1, 1, 0, 0, 0, 0, time.UTC).Add(-24 * time.Hour).Day()
+		endTime = time.Date(now.Year(), month, lastDayOfMonth, 0, 0, 0, 0, time.UTC)
+	} else {
+		t, err := time.ParseInLocation("2006-01-02", *endDateFlag, time.UTC)
+
+		endTime = t
+
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+	}
 
 	params := map[string]string{
 		"key":         os.Getenv("MEETUP_API_KEY"),
