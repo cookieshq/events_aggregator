@@ -113,8 +113,6 @@ func GetMeetupEvents(params map[string]string) (response *http.Response, err err
 
 	url := meetupURL.String()
 
-	fmt.Println(url)
-
 	response, err = http.Get(url)
 
 	if response.StatusCode > 399 {
@@ -139,8 +137,6 @@ func main() {
 	startTime := time.Date(now.Year(), month, 1, 0, 0, 0, 0, time.UTC)
 	lastDayOfMonth := time.Date(now.Year(), month+1, 1, 0, 0, 0, 0, time.UTC).Add(-24 * time.Hour).Day()
 	endTime := time.Date(now.Year(), month, lastDayOfMonth, 0, 0, 0, 0, time.UTC)
-
-	fmt.Println(startTime, endTime)
 
 	params := map[string]string{
 		"key":         os.Getenv("MEETUP_API_KEY"),
