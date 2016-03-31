@@ -119,6 +119,10 @@ func GetMeetupEvents(params map[string]string) (response *http.Response, err err
 
 	response, err = http.Get(url)
 
+	if err != nil {
+		return response, err
+	}
+
 	if response.StatusCode > 399 {
 		errorJSON, err := ioutil.ReadAll(response.Body)
 
