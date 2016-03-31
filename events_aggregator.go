@@ -16,8 +16,42 @@ import (
 	"time"
 )
 
-var startDateFlag = flag.String("start", "", "start `date` in ISO 8601 format for events")
-var endDateFlag = flag.String("end", "", "end `date` in ISO 8601 format for events")
+type datestampFlagValue struct {
+	time.Time
+}
+
+func (d *datestampFlagValue) String() string {
+	if (*d).IsZero() {
+		return ""
+	}
+
+	return fmt.Sprint((*d).Time)
+}
+
+func (d *datestampFlagValue) Set(value string) error {
+	// Prevent > 1 flag being passed on the command line
+	if *d != (datestampFlagValue{}) {
+		return errors.New("datestamp flag already set")
+	}
+
+	t, err := time.ParseInLocation("2006-01-02", value, time.UTC)
+
+	if err != nil {
+		return err
+	}
+
+	*d = datestampFlagValue{t}
+
+	return nil
+}
+
+var startDateFlag datestampFlagValue
+var endDateFlag datestampFlagValue
+
+func init() {
+	flag.Var(&startDateFlag, "start", "start `date` in ISO 8601 format for events")
+	flag.Var(&endDateFlag, "end", "end `date` in ISO 8601 format for events")
+}
 
 type Response struct {
 	Events []Event `json:"results"`
@@ -144,34 +178,20 @@ func main() {
 	now := time.Now()
 	month := now.Month() + 1
 
-	var startTime time.Time
-	var endTime time.Time
+	var startTime datestampFlagValue
+	var endTime datestampFlagValue
 
-	if *startDateFlag == "" {
-		startTime = time.Date(now.Year(), month, 1, 0, 0, 0, 0, time.UTC)
+	if startDateFlag.IsZero() {
+		startTime = datestampFlagValue{time.Date(now.Year(), month, 1, 0, 0, 0, 0, time.UTC)}
 	} else {
-		t, err := time.ParseInLocation("2006-01-02", *startDateFlag, time.UTC)
-
-		startTime = t
-
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
+		startTime = startDateFlag
 	}
 
-	if *endDateFlag == "" {
+	if endDateFlag.IsZero() {
 		lastDayOfMonth := time.Date(now.Year(), month+1, 1, 0, 0, 0, 0, time.UTC).Add(-24 * time.Hour).Day()
-		endTime = time.Date(now.Year(), month, lastDayOfMonth, 0, 0, 0, 0, time.UTC)
+		endTime = datestampFlagValue{time.Date(now.Year(), month, lastDayOfMonth, 0, 0, 0, 0, time.UTC)}
 	} else {
-		t, err := time.ParseInLocation("2006-01-02", *endDateFlag, time.UTC)
-
-		endTime = t
-
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
+		endTime = endDateFlag
 	}
 
 	params := map[string]string{
